@@ -1396,15 +1396,25 @@ class DatetimeInput(LiteralInput):
 
     def _validate(self, event):
         new = self.value
-        if new is not None and ((self.start is not None and self.start > new) or
-                                (self.end is not None and self.end < new)):
-            value = datetime.strftime(new, self.format)
-            start = datetime.strftime(self.start, self.format)
-            end = datetime.strftime(self.end, self.format)
-            if event:
-                self.value = event.old
-            raise ValueError(f'DatetimeInput value must be between {start} and {end}, '
-                             f'supplied value is {value}')
+        if new is None:
+            return
+        below = self.start is not None and self.start > new
+        above = self.end is not None and self.end < new
+        if not (below or above):
+            return
+        if event:
+            self.value = event.old
+        value = datetime.strftime(new, self.format)
+        start = None if self.start is None else datetime.strftime(self.start, self.format)
+        end = None if self.end is None else datetime.strftime(self.end, self.format)
+        if start is not None and end is not None:
+            bound = f'between {start} and {end}'
+        elif start is not None:
+            bound = f'on or after {start}'
+        else:
+            bound = f'on or before {end}'
+        raise ValueError(f'DatetimeInput value must be {bound}, '
+                         f'supplied value is {value}')
 
     def _process_property_change(self, props: dict[str, t.Any]) -> dict[str, t.Any]:
         params = Widget._process_property_change(self, props)
